@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+env/
+venv/
+.venv/
+dist/
+build/
+*.egg-info/
+
+# PyInstaller
+*.spec
+
+# IDE
+.vscode/
+.idea/
+
+# Config (has user-specific data)
+nasa_config.json
+
+# Temporary files
+*.tmp
+temp_*.jpg
+
+# OS junk
+Thumbs.db
+desktop.ini
