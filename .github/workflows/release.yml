@@ -1,0 +1,174 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to create/publish (e.g. v2.1.0)"
+        required: true
+        default: "v2.1.0"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            artifact: NASA_Wallpaper-windows-x64
+            binary: NASA_Wallpaper.exe
+          - os: macos-latest
+            artifact: NASA_Wallpaper-macos-arm64
+            binary: NASA_Wallpaper
+          - os: macos-13
+            artifact: NASA_Wallpaper-macos-x64
+            binary: NASA_Wallpaper
+          - os: ubuntu-22.04
+            artifact: NASA_Wallpaper-linux-x64
+            binary: NASA_Wallpaper
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Linux GUI libs
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-tk libgtk-3-0 libgirepository1.0-dev gcc pkg-config
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Build with PyInstaller (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          python -m PyInstaller `
+            --noconfirm --clean --onefile --windowed `
+            --name NASA_Wallpaper `
+            --icon assets/icon.ico `
+            --add-data "assets/icon.ico;assets" `
+            --add-data "assets/icon.png;assets" `
+            --hidden-import pystray._win32 `
+            run.py
+          New-Item -ItemType Directory -Force release | Out-Null
+          Copy-Item dist/NASA_Wallpaper.exe "release/${{ matrix.artifact }}.exe"
+
+      - name: Build with PyInstaller (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          python -m PyInstaller \
+            --noconfirm --clean --onefile --windowed \
+            --name NASA_Wallpaper \
+            --icon assets/icon.png \
+            --add-data "assets/icon.ico:assets" \
+            --add-data "assets/icon.png:assets" \
+            --hidden-import pystray._darwin \
+            run.py
+          mkdir -p release
+          cp "dist/NASA_Wallpaper" "release/${{ matrix.artifact }}"
+          chmod +x "release/${{ matrix.artifact }}"
+
+      - name: Build with PyInstaller (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          python -m PyInstaller \
+            --noconfirm --clean --onefile --windowed \
+            --name NASA_Wallpaper \
+            --add-data "assets/icon.ico:assets" \
+            --add-data "assets/icon.png:assets" \
+            --hidden-import pystray._appindicator \
+            --hidden-import pystray._util.gtk \
+            run.py || python -m PyInstaller \
+            --noconfirm --clean --onefile --noconsole \
+            --name NASA_Wallpaper \
+            --add-data "assets/icon.ico:assets" \
+            --add-data "assets/icon.png:assets" \
+            run.py
+          mkdir -p release
+          cp "dist/NASA_Wallpaper" "release/${{ matrix.artifact }}"
+          chmod +x "release/${{ matrix.artifact }}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: release/${{ matrix.artifact }}*
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare release files
+        run: |
+          mkdir -p dist-release
+          find artifacts -type f -print
+          find artifacts -type f -exec cp {} dist-release/ \;
+          cd dist-release
+          ls -la
+          for f in NASA_Wallpaper-linux-x64 NASA_Wallpaper-macos-arm64 NASA_Wallpaper-macos-x64; do
+            if [ -f "$f" ]; then chmod +x "$f"; fi
+          done
+          sha256sum * > SHA256SUMS.txt || shasum -a 256 * > SHA256SUMS.txt
+
+      - name: Resolve tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "name=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.name }}
+          name: NASA Wallpaper ${{ steps.tag.outputs.name }}
+          draft: false
+          generate_release_notes: true
+          body: |
+            ## Downloads
+            | Platform | File |
+            |----------|------|
+            | Windows x64 | `NASA_Wallpaper-windows-x64.exe` |
+            | macOS Apple Silicon | `NASA_Wallpaper-macos-arm64` |
+            | macOS Intel | `NASA_Wallpaper-macos-x64` |
+            | Linux x64 | `NASA_Wallpaper-linux-x64` |
+
+            ## Setup
+            1. Download the binary for your OS
+            2. Run it (tray icon appears)
+            3. Tray → **Get free API key…** → paste key in **Settings…**
+
+            ### Notes
+            - **macOS:** right-click → Open the first time (unsigned build)
+            - **Linux:** may need `python3-tk` / tray libs on some desktops; Wayland users may need `feh`/`swaybg`
+            - Images save to `~/Pictures/NASA_APOD`
+          files: dist-release/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

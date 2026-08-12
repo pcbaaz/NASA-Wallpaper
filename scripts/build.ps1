@@ -1,4 +1,4 @@
-# Build NASA Wallpaper with PyInstaller (one-folder).
+# Build NASA Wallpaper with PyInstaller (onefile, Windows).
 # Usage: powershell -ExecutionPolicy Bypass -File scripts\build.ps1
 
 $ErrorActionPreference = "Stop"
@@ -15,6 +15,7 @@ Write-Host "Running PyInstaller..."
 python -m PyInstaller `
   --noconfirm `
   --clean `
+  --onefile `
   --windowed `
   --name NASA_Wallpaper `
   --icon assets\icon.ico `
@@ -24,5 +25,5 @@ python -m PyInstaller `
   run.py
 
 Write-Host ""
-Write-Host "Build complete: dist\NASA_Wallpaper\NASA_Wallpaper.exe"
-Write-Host "Optional: compile setup.iss with Inno Setup to produce installer\NASA_Wallpaper_Setup.exe"
+Write-Host "Build complete: dist\NASA_Wallpaper.exe"
+Write-Host "GitHub Actions builds Windows/macOS/Linux releases on version tags (v*)."
