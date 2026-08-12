@@ -26,9 +26,6 @@ jobs:
           - os: macos-latest
             artifact: NASA_Wallpaper-macos-arm64
             binary: NASA_Wallpaper
-          - os: macos-13
-            artifact: NASA_Wallpaper-macos-x64
-            binary: NASA_Wallpaper
           - os: ubuntu-22.04
             artifact: NASA_Wallpaper-linux-x64
             binary: NASA_Wallpaper
@@ -130,7 +127,7 @@ jobs:
           find artifacts -type f -exec cp {} dist-release/ \;
           cd dist-release
           ls -la
-          for f in NASA_Wallpaper-linux-x64 NASA_Wallpaper-macos-arm64 NASA_Wallpaper-macos-x64; do
+          for f in NASA_Wallpaper-linux-x64 NASA_Wallpaper-macos-arm64; do
             if [ -f "$f" ]; then chmod +x "$f"; fi
           done
           sha256sum * > SHA256SUMS.txt || shasum -a 256 * > SHA256SUMS.txt
@@ -156,8 +153,7 @@ jobs:
             | Platform | File |
             |----------|------|
             | Windows x64 | `NASA_Wallpaper-windows-x64.exe` |
-            | macOS Apple Silicon | `NASA_Wallpaper-macos-arm64` |
-            | macOS Intel | `NASA_Wallpaper-macos-x64` |
+            | macOS (Apple Silicon) | `NASA_Wallpaper-macos-arm64` |
             | Linux x64 | `NASA_Wallpaper-linux-x64` |
 
             ## Setup

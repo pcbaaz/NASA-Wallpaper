@@ -16,8 +16,9 @@ Get the latest binaries from **[Releases](https://github.com/pcbaaz/NASA-Wallpap
 |----------|--------|
 | Windows x64 | `NASA_Wallpaper-windows-x64.exe` |
 | macOS Apple Silicon (M1/M2/M3…) | `NASA_Wallpaper-macos-arm64` |
-| macOS Intel | `NASA_Wallpaper-macos-x64` |
 | Linux x64 | `NASA_Wallpaper-linux-x64` |
+
+> Intel Mac: build from source (`bash scripts/build.sh`) or use Rosetta with the ARM build when available.
 
 After download:
 1. Run the app (a tray icon appears near the clock)

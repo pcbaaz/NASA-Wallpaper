@@ -4,7 +4,7 @@
 [Setup]
 AppId={{A7C3E91B-4D2F-4B8A-9E11-NASAWALLPAPER2}}
 AppName=NASA Wallpaper
-AppVersion=2.1.0
+AppVersion=2.1.1
 AppPublisher=PC BAAZ
 AppPublisherURL=https://github.com/pcbaaz/NASA-Wallpaper
 DefaultDirName={autopf}\PC BAAZ\NASA Wallpaper
