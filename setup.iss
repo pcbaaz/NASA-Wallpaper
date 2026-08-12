@@ -2,7 +2,7 @@
 ; Built by GitHub Actions / scripts\build.ps1
 
 #define MyAppName "NASA Wallpaper"
-#define MyAppVersion "2.3.0"
+#define MyAppVersion "2.3.1"
 #define MyAppPublisher "PC BAAZ"
 #define MyAppURL "https://github.com/pcbaaz/NASA-Wallpaper"
 #define MyAppExeName "NASA_Wallpaper.exe"
@@ -34,9 +34,9 @@ AllowNoIcons=no
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
-; Desktop shortcut ON by default
+; Desktop shortcut + Run at startup ON by default
 Name: "desktopicon"; Description: "Create a desktop icon"; GroupDescription: "Additional icons:"; Flags: checkedonce
-Name: "startup"; Description: "Run on Windows startup"; GroupDescription: "Startup options:"; Flags: unchecked
+Name: "startup"; Description: "Run when Windows starts"; GroupDescription: "Startup options:"; Flags: checkedonce
 
 [Files]
 Source: "dist\NASA_Wallpaper.exe"; DestDir: "{app}"; Flags: ignoreversion

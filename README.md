@@ -23,8 +23,9 @@ Get the latest builds from **[Releases](https://github.com/pcbaaz/NASA-Wallpaper
 1. Download **NASA_Wallpaper_Setup.exe**
 2. Run the setup wizard
 3. A **desktop shortcut** is created by default
-4. Launch the app → tray icon appears
-5. Tray → **Get free API key…** → paste key in **Settings…**
+4. **Run at Windows startup** is enabled by default
+5. Launch the app → tray icon appears
+6. Tray → **Get free API key…** → paste key in **Settings…**
 
 ### First-run notes (macOS / Linux / portable)
 - **macOS:** right-click the file → **Open** the first time (build is unsigned)
