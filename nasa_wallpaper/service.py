@@ -12,6 +12,7 @@ from pathlib import Path
 
 from nasa_wallpaper.cache import ImageCache
 from nasa_wallpaper.config import AppConfig, resolve_api_key, save_config
+from nasa_wallpaper.debug_log import dlog
 from nasa_wallpaper.nasa_api import APOD_START, NasaApiError, NasaApodClient
 from nasa_wallpaper.quality import QualityThresholds, evaluate_image_bytes, passes_metadata_filter
 from nasa_wallpaper.wallpaper import set_wallpaper
@@ -38,11 +39,28 @@ class WallpaperService:
 
     def update(self) -> UpdateResult:
         mode = self.config.mode
+        # #region agent log
+        dlog("N", "service.py:update", "start", {"mode": mode}, run_id="fetch")
+        # #endregion
         try:
             if mode == "random":
-                return self._update_random()
-            return self._update_latest()
+                result = self._update_random()
+            else:
+                result = self._update_latest()
+            # #region agent log
+            dlog(
+                "N",
+                "service.py:update",
+                "end",
+                {"ok": result.ok, "date": result.date, "msg": (result.message or "")[:120]},
+                run_id="fetch",
+            )
+            # #endregion
+            return result
         except NasaApiError as exc:
+            # #region agent log
+            dlog("N", "service.py:update", "api_error", {"error": str(exc)[:160]}, run_id="fetch")
+            # #endregion
             logger.error("API error: %s", exc)
             return UpdateResult(False, str(exc))
         except Exception as exc:  # noqa: BLE001
@@ -152,7 +170,15 @@ class WallpaperService:
         try:
             entry = client.get_apod(day)
         except NasaApiError as exc:
-            # Keep looping other days instead of aborting the whole update.
+            # #region agent log
+            dlog(
+                "N",
+                "service.py:_try_day",
+                "day_fail",
+                {"date": day.isoformat(), "error": str(exc)[:140]},
+                run_id="fetch",
+            )
+            # #endregion
             return UpdateResult(False, str(exc))
 
         if entry is None:
