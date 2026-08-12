@@ -22,47 +22,93 @@ def open_settings(config: AppConfig, on_saved=None) -> None:
     frame.grid(row=0, column=0, sticky="nsew")
 
     ttk.Label(frame, text="NASA API Key (required for daily use)", font=("", 10, "bold")).grid(
-        row=0, column=0, columnspan=2, sticky="w"
+        row=0, column=0, columnspan=3, sticky="w"
     )
 
     guide = (
         "1) Open api.nasa.gov\n"
         "2) Fill the short form (name + email)\n"
-        "3) Copy your free key and paste it below\n"
+        "3) Copy your key, then click Paste key (or Ctrl+V)\n"
         "4) Without a personal key, DEMO_KEY is used (very limited)"
     )
     ttk.Label(frame, text=guide, justify="left").grid(
-        row=1, column=0, columnspan=2, sticky="w", pady=(6, 10)
+        row=1, column=0, columnspan=3, sticky="w", pady=(6, 10)
     )
 
     ttk.Button(
         frame,
         text="Open api.nasa.gov to get a free key",
         command=lambda: open_url(NASA_API_SIGNUP_URL),
-    ).grid(row=2, column=0, columnspan=2, sticky="ew", pady=(0, 12))
+    ).grid(row=2, column=0, columnspan=3, sticky="ew", pady=(0, 12))
 
     status = (
         "Status: personal key configured"
         if has_personal_api_key(config)
         else "Status: using DEMO_KEY (get a free personal key)"
     )
-    status_label = ttk.Label(frame, text=status)
-    status_label.grid(row=3, column=0, columnspan=2, sticky="w", pady=(0, 8))
+    ttk.Label(frame, text=status).grid(row=3, column=0, columnspan=3, sticky="w", pady=(0, 8))
 
+    # Use classic tk.Entry — ttk.Entry often breaks Ctrl+V paste on Windows.
     api_var = tk.StringVar(value=config.api_key)
-    api_entry = ttk.Entry(frame, textvariable=api_var, width=44, show="*")
-    api_entry.grid(row=4, column=0, columnspan=2, sticky="ew", pady=(0, 6))
+    api_entry = tk.Entry(frame, textvariable=api_var, width=48, show="")
+    api_entry.grid(row=4, column=0, columnspan=3, sticky="ew", pady=(0, 6))
 
-    show_var = tk.BooleanVar(value=False)
+    show_var = tk.BooleanVar(value=True)
 
     def toggle_show() -> None:
         api_entry.configure(show="" if show_var.get() else "*")
 
-    ttk.Checkbutton(frame, text="Show key", variable=show_var, command=toggle_show).grid(
-        row=5, column=0, sticky="w", pady=(0, 14)
+    def paste_from_clipboard(event=None):  # noqa: ARG001
+        try:
+            text = root.clipboard_get()
+        except tk.TclError:
+            messagebox.showwarning(
+                "Clipboard empty",
+                "Copy your API key first, then click Paste key.",
+                parent=root,
+            )
+            return "break"
+        text = (text or "").strip().replace("\r", "").replace("\n", "")
+        if not text:
+            messagebox.showwarning("Clipboard empty", "No text found on the clipboard.", parent=root)
+            return "break"
+        api_entry.delete(0, tk.END)
+        api_entry.insert(0, text)
+        api_entry.icursor(tk.END)
+        api_entry.focus_set()
+        return "break"
+
+    def clear_key() -> None:
+        api_var.set("")
+        api_entry.focus_set()
+
+    key_actions = ttk.Frame(frame)
+    key_actions.grid(row=5, column=0, columnspan=3, sticky="ew", pady=(0, 14))
+    ttk.Button(key_actions, text="Paste key", command=paste_from_clipboard).pack(side="left")
+    ttk.Button(key_actions, text="Clear", command=clear_key).pack(side="left", padx=(8, 0))
+    ttk.Checkbutton(key_actions, text="Show key", variable=show_var, command=toggle_show).pack(
+        side="left", padx=(12, 0)
     )
 
-    ttk.Separator(frame).grid(row=6, column=0, columnspan=2, sticky="ew", pady=(0, 12))
+    # Explicit paste bindings (Windows Tk often ignores default Ctrl+V on entries).
+    for seq in ("<Control-v>", "<Control-V>", "<Shift-Insert>", "<Control-Insert>"):
+        api_entry.bind(seq, paste_from_clipboard)
+    root.bind_all("<Control-v>", paste_from_clipboard)
+    root.bind_all("<Control-V>", paste_from_clipboard)
+
+    menu = tk.Menu(root, tearoff=0)
+    menu.add_command(label="Paste", command=paste_from_clipboard)
+    menu.add_command(label="Clear", command=clear_key)
+
+    def show_menu(event) -> None:
+        try:
+            menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            menu.grab_release()
+
+    api_entry.bind("<Button-3>", show_menu)
+
+    ttk.Separator(frame).grid(row=6, column=0, columnspan=3, sticky="ew", pady=(0, 12))
 
     ttk.Label(frame, text="Min width").grid(row=7, column=0, sticky="w")
     width_var = tk.StringVar(value=str(config.min_width))
@@ -93,16 +139,42 @@ def open_settings(config: AppConfig, on_saved=None) -> None:
         save_config(config)
         if on_saved:
             on_saved(config)
+        try:
+            root.unbind_all("<Control-v>")
+            root.unbind_all("<Control-V>")
+        except tk.TclError:
+            pass
+        root.destroy()
+
+    def on_close() -> None:
+        try:
+            root.unbind_all("<Control-v>")
+            root.unbind_all("<Control-V>")
+        except tk.TclError:
+            pass
         root.destroy()
 
     buttons = ttk.Frame(frame)
-    buttons.grid(row=11, column=0, columnspan=2, pady=(16, 0), sticky="e")
-    ttk.Button(buttons, text="Cancel", command=root.destroy).pack(side="right", padx=(8, 0))
+    buttons.grid(row=11, column=0, columnspan=3, pady=(16, 0), sticky="e")
+    ttk.Button(buttons, text="Cancel", command=on_close).pack(side="right", padx=(8, 0))
     ttk.Button(buttons, text="Save", command=save).pack(side="right")
 
+    root.protocol("WM_DELETE_WINDOW", on_close)
     root.update_idletasks()
     w, h = root.winfo_reqwidth(), root.winfo_reqheight()
     x = (root.winfo_screenwidth() - w) // 2
     y = (root.winfo_screenheight() - h) // 3
     root.geometry(f"+{x}+{y}")
+
+    def focus_entry() -> None:
+        try:
+            root.lift()
+            root.focus_force()
+            api_entry.focus_set()
+            api_entry.selection_range(0, tk.END)
+        except tk.TclError:
+            pass
+
+    root.after(50, focus_entry)
+    root.after(200, focus_entry)
     root.mainloop()
