@@ -14,13 +14,12 @@ from nasa_wallpaper import APP_NAME, __version__
 from nasa_wallpaper.cache import ImageCache
 from nasa_wallpaper.config import (
     AppConfig,
-    has_personal_api_key,
     load_config,
     recently_updated,
     save_config,
 )
 from nasa_wallpaper.platform_util import (
-    NASA_API_SIGNUP_URL,
+    APOD_HOME_URL,
     open_path,
     open_url,
     resource_path,
@@ -94,18 +93,11 @@ class TrayApp:
                 daemon=True,
             ).start()
 
-        if not has_personal_api_key(self.config):
-            threading.Timer(2.0, self._remind_api_key).start()
-
         if self.config.auto_check_updates:
             threading.Timer(8.0, lambda: self._check_app_updates(silent=True)).start()
 
         logger.info("Tray started")
         self.icon.run()
-
-    def _remind_api_key(self) -> None:
-        # Notifications disabled — keep status in tooltip/menu only.
-        logger.info("No personal API key configured (DEMO_KEY fallback)")
 
     def _notify(self, title: str, message: str) -> None:
         # Desktop notifications are intentionally disabled.
@@ -124,9 +116,7 @@ class TrayApp:
                 pass
 
     def _key_status_label(self) -> str:
-        if has_personal_api_key(self.config):
-            return "API key: personal"
-        return "API key: DEMO (get free key)"
+        return "Source: apod.nasa.gov"
 
     def _build_menu(self) -> pystray.Menu:
         last = self.config.last_title or "None yet"
@@ -184,7 +174,7 @@ class TrayApp:
                 self._on_toggle_startup,
                 checked=lambda item: is_startup_enabled(),
             ),
-            Item("Get free API key…", self._on_get_api_key),
+            Item("Open APOD website", lambda icon, item: open_url(APOD_HOME_URL)),
             Item("Settings…", self._on_settings),
             pystray.Menu.SEPARATOR,
             Item(
@@ -265,7 +255,7 @@ class TrayApp:
             self._notify(APP_NAME, result.message)
             logger.warning("Update failed: %s", result.message)
             if "rate limit" in result.message.lower() or "429" in result.message:
-                self._notify(APP_NAME, "Open Settings → get a free personal API key at api.nasa.gov")
+                self._notify(APP_NAME, "Site busy — try Update Now again in a minute.")
 
     def _on_open_folder(self, icon=None, item=None):  # noqa: ARG002
         try:
@@ -287,10 +277,6 @@ class TrayApp:
         enabled = toggle_startup()
         self._refresh_menu()
         self._notify(APP_NAME, "Startup enabled" if enabled else "Startup disabled")
-
-    def _on_get_api_key(self, icon=None, item=None):  # noqa: ARG002
-        open_url(NASA_API_SIGNUP_URL)
-        self._notify(APP_NAME, "After signup, paste your key in Settings.")
 
     def _on_settings(self, icon=None, item=None):  # noqa: ARG002
         def worker() -> None:

@@ -102,21 +102,13 @@ def save_config(config: AppConfig) -> None:
 
 
 def has_personal_api_key(config: AppConfig) -> bool:
-    env_key = os.environ.get("NASA_API_KEY", "").strip()
-    if env_key and env_key.upper() != "DEMO_KEY":
-        return True
-    key = config.api_key.strip()
-    return bool(key) and key.upper() != "DEMO_KEY"
+    """Deprecated: API keys are no longer used (HTML source)."""
+    return False
 
 
 def resolve_api_key(config: AppConfig) -> str:
-    """Prefer user/env key; fall back to DEMO_KEY for first-run exploration only."""
-    env_key = os.environ.get("NASA_API_KEY", "").strip()
-    if env_key:
-        return env_key
-    if config.api_key.strip():
-        return config.api_key.strip()
-    return "DEMO_KEY"
+    """Deprecated compatibility stub."""
+    return ""
 
 
 def recently_updated(config: AppConfig, within_minutes: int | None = None) -> bool:

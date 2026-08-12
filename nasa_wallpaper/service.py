@@ -11,7 +11,7 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from nasa_wallpaper.cache import ImageCache
-from nasa_wallpaper.config import AppConfig, resolve_api_key, save_config
+from nasa_wallpaper.config import AppConfig, save_config
 from nasa_wallpaper.nasa_api import APOD_START, NasaApiError, NasaApodClient
 from nasa_wallpaper.quality import QualityThresholds, evaluate_image_bytes, passes_metadata_filter
 from nasa_wallpaper.wallpaper import set_wallpaper
@@ -50,7 +50,7 @@ class WallpaperService:
             return UpdateResult(False, f"Error: {exc}")
 
     def _client(self) -> NasaApodClient:
-        return NasaApodClient(resolve_api_key(self.config))
+        return NasaApodClient()
 
     def _thresholds(self) -> QualityThresholds:
         return QualityThresholds(

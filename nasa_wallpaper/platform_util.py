@@ -12,7 +12,6 @@ from pathlib import Path
 
 logger = logging.getLogger("nasa_wallpaper.platform_util")
 
-NASA_API_SIGNUP_URL = "https://api.nasa.gov/"
 APOD_HOME_URL = "https://apod.nasa.gov/apod/"
 
 _lock_fh = None

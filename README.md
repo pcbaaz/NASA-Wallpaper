@@ -4,9 +4,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue)](https://github.com/pcbaaz/NASA-Wallpaper/releases/latest)
 
-Lightweight **system-tray** app that sets curated NASA Astronomy Picture of the Day (APOD) images as your desktop wallpaper.
+Lightweight **system-tray** app that sets curated NASA Astronomy Picture of the Day images as your desktop wallpaper.
 
-Works on **Windows**, **macOS**, and **Linux**. No main window — everything lives in the tray menu.
+Works on **Windows**, **macOS**, and **Linux**. Images come directly from [apod.nasa.gov](https://apod.nasa.gov/apod/) — **no API key required**.
 
 ## Download
 
@@ -25,7 +25,7 @@ Get the latest builds from **[Releases](https://github.com/pcbaaz/NASA-Wallpaper
 3. A **desktop shortcut** is created by default
 4. **Run at Windows startup** is enabled by default
 5. Launch the app → tray icon appears
-6. Tray → **Get free API key…** → paste key in **Settings…**
+6. Choose **Mode** (Latest / Random) → **Update Now**
 
 ### First-run notes (macOS / Linux / portable)
 - **macOS:** right-click the file → **Open** the first time (build is unsigned)
@@ -37,26 +37,13 @@ Get the latest builds from **[Releases](https://github.com/pcbaaz/NASA-Wallpaper
 - Tray-only UI (lightweight)
 - **Latest** mode — walks recent APODs for a high-quality photo
 - **Random** mode — picks from the full archive (1995 → today)
-- Quality filter (resolution, size, aspect ratio; skips charts/videos)
+- Beauty/quality filter (skips charts, montages, false-color composites, videos)
 - Auto-update: Off / 1h / 4h / 12h / 24h
 - Optional run-at-startup
 - Local cache in `Pictures/NASA_APOD`
 - Single-instance lock
-- Built-in free NASA API key guide
-- **In-app updates** — checks GitHub Releases and can download/install the new binary
-
-## Get a free NASA API key
-
-Signup is free and takes about a minute:
-
-1. Open [https://api.nasa.gov/](https://api.nasa.gov/)
-2. Submit the short form (name + email)
-3. Copy the key you receive
-4. In the app: tray → **Settings…** → paste → Save
-
-Without a personal key the app falls back to NASA's shared `DEMO_KEY` (about **30/hour** and **50/day** per IP). For normal use, set your own key.
-
-Optional: set environment variable `NASA_API_KEY`.
+- **In-app updates** from GitHub Releases
+- No NASA API key / no DEMO_KEY limits
 
 ## Install from source
 
@@ -82,7 +69,7 @@ python -m nasa_wallpaper
 - Auto-update → Off / 1h / 4h / 12h / 24h
 - Open images folder / Open current wallpaper
 - Run at startup
-- Get free API key…
+- Open APOD website
 - Settings…
 - App updates → Check / Download & install / Auto-check
 - Quit
@@ -95,8 +82,6 @@ Packaged builds can update themselves from GitHub Releases:
 2. If a newer version exists → **Download & install update**
 3. The app restarts on the new binary
 
-Auto-check on startup is enabled by default (notification only; install stays one click).
-
 ## Platform notes
 
 | OS | Wallpaper | Startup |
@@ -104,8 +89,6 @@ Auto-check on startup is enabled by default (notification only; install stays on
 | Windows | Desktop Fill (`SystemParametersInfo`) | HKCU Run key |
 | macOS | System Events (`osascript`) | LaunchAgent plist |
 | Linux | gsettings / Plasma / feh / nitrogen / swaybg | `~/.config/autostart` |
-
-Linux Wayland/tiling users may need `feh`, `nitrogen`, or `swaybg`.
 
 ## Config & logs
 
@@ -128,8 +111,6 @@ powershell -ExecutionPolicy Bypass -File scripts\build.ps1
 # macOS / Linux
 bash scripts/build.sh
 ```
-
-Official multi-platform releases are produced by GitHub Actions when a `v*` tag is pushed.
 
 ## Smoke test
 
