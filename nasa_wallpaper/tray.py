@@ -29,6 +29,13 @@ from nasa_wallpaper.scheduler import IntervalScheduler
 from nasa_wallpaper.service import UpdateResult, WallpaperService
 from nasa_wallpaper.settings_dialog import open_settings
 from nasa_wallpaper.startup import is_startup_enabled, toggle_startup
+from nasa_wallpaper.updater import (
+    RELEASES_PAGE,
+    AppUpdate,
+    check_for_update,
+    current_install_path,
+    install_update,
+)
 
 logger = logging.getLogger("nasa_wallpaper.tray")
 
@@ -62,6 +69,8 @@ class TrayApp:
         self.icon: pystray.Icon | None = None
         self._busy = False
         self._busy_lock = threading.Lock()
+        self._pending_app_update: AppUpdate | None = None
+        self._app_update_busy = False
 
     def run(self) -> None:
         self.icon = pystray.Icon(
@@ -87,6 +96,9 @@ class TrayApp:
 
         if not has_personal_api_key(self.config):
             threading.Timer(2.0, self._remind_api_key).start()
+
+        if self.config.auto_check_updates:
+            threading.Timer(8.0, lambda: self._check_app_updates(silent=True)).start()
 
         logger.info("Tray started")
         self.icon.run()
@@ -179,6 +191,26 @@ class TrayApp:
             ),
             Item("Get free API key…", self._on_get_api_key),
             Item("Settings…", self._on_settings),
+            pystray.Menu.SEPARATOR,
+            Item(
+                "App updates",
+                pystray.Menu(
+                    Item("Check for updates", self._on_check_updates),
+                    Item(
+                        "Download & install update",
+                        self._on_install_update,
+                        enabled=self._pending_app_update is not None
+                        and current_install_path() is not None,
+                    ),
+                    Item("Open releases page", lambda icon, item: open_url(RELEASES_PAGE)),
+                    Item(
+                        "Auto-check on startup",
+                        self._on_toggle_auto_check,
+                        checked=lambda item: self.config.auto_check_updates,
+                    ),
+                ),
+            ),
+            Item(f"Version {__version__}", None, enabled=False),
             pystray.Menu.SEPARATOR,
             Item("Quit", self._on_quit),
         )
@@ -276,6 +308,80 @@ class TrayApp:
         self.service.refresh_config(config)
         self._refresh_menu()
         self._notify(APP_NAME, "Settings saved")
+
+    def _on_check_updates(self, icon=None, item=None):  # noqa: ARG002
+        threading.Thread(
+            target=self._check_app_updates,
+            kwargs={"silent": False},
+            name="nasa-app-update-check",
+            daemon=True,
+        ).start()
+
+    def _on_toggle_auto_check(self, icon=None, item=None):  # noqa: ARG002
+        self.config.auto_check_updates = not self.config.auto_check_updates
+        save_config(self.config)
+        self._refresh_menu()
+        state = "on" if self.config.auto_check_updates else "off"
+        self._notify(APP_NAME, f"Auto-check updates: {state}")
+
+    def _on_install_update(self, icon=None, item=None):  # noqa: ARG002
+        if self._pending_app_update is None:
+            self._notify(APP_NAME, "No update queued. Use Check for updates first.")
+            return
+        if current_install_path() is None:
+            open_url(self._pending_app_update.html_url)
+            self._notify(APP_NAME, "Running from source — opening release page.")
+            return
+        threading.Thread(
+            target=self._install_pending_update,
+            name="nasa-app-update-install",
+            daemon=True,
+        ).start()
+
+    def _check_app_updates(self, silent: bool = False) -> None:
+        if self._app_update_busy:
+            return
+        self._app_update_busy = True
+        try:
+            from datetime import datetime
+
+            self.config.last_app_update_check = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            save_config(self.config)
+            update = check_for_update()
+            if update is None:
+                self._pending_app_update = None
+                if not silent:
+                    self._notify(APP_NAME, f"You're up to date (v{__version__}).")
+                self._refresh_menu()
+                return
+            self._pending_app_update = update
+            self._refresh_menu()
+            self._notify(
+                APP_NAME,
+                f"Update v{update.version} available. Tray → App updates → Download & install.",
+            )
+            # Packaged builds: auto-install when user already opted into auto-check
+            # and this is a silent startup check — only notify; install is explicit
+            # to avoid surprising restarts.
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("App update check failed: %s", exc)
+            if not silent:
+                self._notify(APP_NAME, str(exc))
+        finally:
+            self._app_update_busy = False
+
+    def _install_pending_update(self) -> None:
+        update = self._pending_app_update
+        if update is None:
+            return
+        try:
+            self._notify(APP_NAME, f"Downloading v{update.version}…")
+            install_update(update)
+            self._notify(APP_NAME, "Installing update and restarting…")
+            self._on_quit()
+        except Exception as exc:  # noqa: BLE001
+            logger.exception("Failed to install app update")
+            self._notify(APP_NAME, f"Update failed: {exc}")
 
     def _on_quit(self, icon=None, item=None):  # noqa: ARG002
         self.scheduler.stop(join=False)

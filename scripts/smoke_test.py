@@ -14,6 +14,7 @@ from PIL import Image
 
 from nasa_wallpaper.nasa_api import ApodEntry
 from nasa_wallpaper.quality import QualityThresholds, evaluate_image_bytes, passes_metadata_filter
+from nasa_wallpaper.updater import is_newer
 
 
 def _jpeg_bytes(width: int, height: int, quality: int = 90) -> bytes:
@@ -58,6 +59,10 @@ def main() -> int:
     bad_res = evaluate_image_bytes(_jpeg_bytes(800, 600, quality=95), thresholds)
     assert good.ok, good.reason
     assert not bad_res.ok, "low res should fail"
+
+    assert is_newer("2.2.0", "2.1.1")
+    assert not is_newer("2.1.1", "2.2.0")
+    assert not is_newer("2.2.0", "2.2.0")
 
     print("smoke_test: OK")
     return 0

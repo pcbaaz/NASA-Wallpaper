@@ -27,10 +27,12 @@ class AppConfig:
     latest_lookback_days: int = 14
     random_max_attempts: int = 25
     skip_startup_update_minutes: int = 90
+    auto_check_updates: bool = True
     last_update: str | None = None
     last_image_path: str | None = None
     last_title: str | None = None
     last_date: str | None = None
+    last_app_update_check: str | None = None
 
 
 def appdata_dir() -> Path:

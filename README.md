@@ -42,6 +42,7 @@ After download:
 - Local cache in `Pictures/NASA_APOD`
 - Single-instance lock
 - Built-in free NASA API key guide
+- **In-app updates** — checks GitHub Releases and can download/install the new binary
 
 ## Get a free NASA API key
 
@@ -82,7 +83,18 @@ python -m nasa_wallpaper
 - Run at startup
 - Get free API key…
 - Settings…
+- App updates → Check / Download & install / Auto-check
 - Quit
+
+## App updates
+
+Packaged builds can update themselves from GitHub Releases:
+
+1. Tray → **App updates → Check for updates**
+2. If a newer version exists → **Download & install update**
+3. The app restarts on the new binary
+
+Auto-check on startup is enabled by default (notification only; install stays one click).
 
 ## Platform notes
 
