@@ -10,26 +10,26 @@ Works on **Windows**, **macOS**, and **Linux**. No main window — everything li
 
 ## Download
 
-Get the latest binaries from **[Releases](https://github.com/pcbaaz/NASA-Wallpaper/releases/latest)**:
+Get the latest builds from **[Releases](https://github.com/pcbaaz/NASA-Wallpaper/releases/latest)**:
 
-| Platform | Asset |
-|----------|--------|
-| Windows x64 | `NASA_Wallpaper-windows-x64.exe` |
-| macOS Apple Silicon (M1/M2/M3…) | `NASA_Wallpaper-macos-arm64` |
-| Linux x64 | `NASA_Wallpaper-linux-x64` |
+| Platform | Asset | Recommended |
+|----------|--------|-------------|
+| **Windows** | `NASA_Wallpaper_Setup.exe` | Yes — full installer |
+| Windows portable | `NASA_Wallpaper-windows-x64.exe` | |
+| macOS Apple Silicon (M1/M2/M3…) | `NASA_Wallpaper-macos-arm64` | |
+| Linux x64 | `NASA_Wallpaper-linux-x64` | |
 
-> Intel Mac: build from source (`bash scripts/build.sh`) or use Rosetta with the ARM build when available.
+### Windows install
+1. Download **NASA_Wallpaper_Setup.exe**
+2. Run the setup wizard
+3. A **desktop shortcut** is created by default
+4. Launch the app → tray icon appears
+5. Tray → **Get free API key…** → paste key in **Settings…**
 
-After download:
-1. Run the app (a tray icon appears near the clock)
-2. Tray → **Get free API key…** (opens [api.nasa.gov](https://api.nasa.gov/))
-3. Tray → **Settings…** → paste your key → Save
-4. Choose **Mode** (Latest / Random) and press **Update Now**
-
-### First-run notes
+### First-run notes (macOS / Linux / portable)
 - **macOS:** right-click the file → **Open** the first time (build is unsigned)
 - **Linux:** make executable: `chmod +x NASA_Wallpaper-linux-x64`
-- **Windows:** SmartScreen may warn on first run — choose More info → Run anyway
+- **Windows portable:** SmartScreen may warn on first run — More info → Run anyway
 
 ## Features
 

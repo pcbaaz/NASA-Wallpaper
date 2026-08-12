@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag to create/publish (e.g. v2.1.0)"
+        description: "Tag to create/publish (e.g. v2.3.0)"
         required: true
-        default: "v2.1.0"
+        default: "v2.3.0"
 
 permissions:
   contents: write
@@ -64,8 +64,23 @@ jobs:
             --add-data "assets/icon.png;assets" `
             --hidden-import pystray._win32 `
             run.py
-          New-Item -ItemType Directory -Force release | Out-Null
+          New-Item -ItemType Directory -Force release, installer | Out-Null
           Copy-Item dist/NASA_Wallpaper.exe "release/${{ matrix.artifact }}.exe"
+
+      - name: Build Windows Setup (Inno Setup)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install innosetup -y --no-progress
+          $iscc = @(
+            "${env:LOCALAPPDATA}\Programs\Inno Setup 6\ISCC.exe",
+            "C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
+            "C:\Program Files\Inno Setup 6\ISCC.exe"
+          ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $iscc) { throw "ISCC.exe not found after Inno Setup install" }
+          & $iscc setup.iss
+          Copy-Item installer\NASA_Wallpaper_Setup.exe release\NASA_Wallpaper_Setup.exe
+          Get-ChildItem release | Format-Table Name, Length
 
       - name: Build with PyInstaller (macOS)
         if: runner.os == 'macOS'
@@ -106,7 +121,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: release/${{ matrix.artifact }}*
+          path: release/*
 
   publish:
     needs: build
@@ -150,21 +165,24 @@ jobs:
           generate_release_notes: true
           body: |
             ## Downloads
-            | Platform | File |
-            |----------|------|
-            | Windows x64 | `NASA_Wallpaper-windows-x64.exe` |
-            | macOS (Apple Silicon) | `NASA_Wallpaper-macos-arm64` |
-            | Linux x64 | `NASA_Wallpaper-linux-x64` |
+            | Platform | File | Notes |
+            |----------|------|-------|
+            | **Windows (recommended)** | `NASA_Wallpaper_Setup.exe` | Installer — desktop shortcut by default |
+            | Windows portable | `NASA_Wallpaper-windows-x64.exe` | No install |
+            | macOS Apple Silicon | `NASA_Wallpaper-macos-arm64` | |
+            | Linux x64 | `NASA_Wallpaper-linux-x64` | |
 
-            ## Setup
-            1. Download the binary for your OS
-            2. Run it (tray icon appears)
-            3. Tray → **Get free API key…** → paste key in **Settings…**
+            ## Windows setup
+            1. Download **NASA_Wallpaper_Setup.exe**
+            2. Run the installer (desktop icon is created by default)
+            3. Launch from desktop / Start Menu
+            4. Tray → **Get free API key…** → paste in **Settings…**
 
             ### Notes
             - **macOS:** right-click → Open the first time (unsigned build)
-            - **Linux:** may need `python3-tk` / tray libs on some desktops; Wayland users may need `feh`/`swaybg`
+            - **Linux:** `chmod +x` then run; Wayland users may need `feh`/`swaybg`
             - Images save to `~/Pictures/NASA_APOD`
+            - Packaged builds can self-update via tray → **App updates**
           files: dist-release/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

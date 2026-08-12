@@ -1,4 +1,4 @@
-# Build NASA Wallpaper with PyInstaller (onefile, Windows).
+# Build Windows portable EXE + Inno Setup installer.
 # Usage: powershell -ExecutionPolicy Bypass -File scripts\build.ps1
 
 $ErrorActionPreference = "Stop"
@@ -10,8 +10,9 @@ python -m pip install -r requirements.txt
 
 Write-Host "Cleaning previous build..."
 Remove-Item -Recurse -Force dist, build -ErrorAction SilentlyContinue
+New-Item -ItemType Directory -Force -Path installer | Out-Null
 
-Write-Host "Running PyInstaller..."
+Write-Host "Running PyInstaller (onefile)..."
 python -m PyInstaller `
   --noconfirm `
   --clean `
@@ -24,6 +25,19 @@ python -m PyInstaller `
   --hidden-import pystray._win32 `
   run.py
 
-Write-Host ""
-Write-Host "Build complete: dist\NASA_Wallpaper.exe"
-Write-Host "GitHub Actions builds Windows/macOS/Linux releases on version tags (v*)."
+$iscc = @(
+  "${env:LOCALAPPDATA}\Programs\Inno Setup 6\ISCC.exe",
+  "C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
+  "C:\Program Files\Inno Setup 6\ISCC.exe"
+) | Where-Object { Test-Path $_ } | Select-Object -First 1
+
+if ($iscc) {
+  Write-Host "Compiling installer with Inno Setup..."
+  & $iscc setup.iss
+  Write-Host "Installer: installer\NASA_Wallpaper_Setup.exe"
+} else {
+  Write-Host "Inno Setup not found — portable only: dist\NASA_Wallpaper.exe"
+  Write-Host "Install Inno Setup 6 to build NASA_Wallpaper_Setup.exe"
+}
+
+Write-Host "Portable: dist\NASA_Wallpaper.exe"

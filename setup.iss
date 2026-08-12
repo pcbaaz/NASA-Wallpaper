@@ -1,15 +1,23 @@
-; Inno Setup script for NASA Wallpaper 2.0
-; Compile after: scripts\build.ps1
+; Inno Setup — NASA Wallpaper
+; Built by GitHub Actions / scripts\build.ps1
+
+#define MyAppName "NASA Wallpaper"
+#define MyAppVersion "2.3.0"
+#define MyAppPublisher "PC BAAZ"
+#define MyAppURL "https://github.com/pcbaaz/NASA-Wallpaper"
+#define MyAppExeName "NASA_Wallpaper.exe"
 
 [Setup]
 AppId={{A7C3E91B-4D2F-4B8A-9E11-NASAWALLPAPER2}}
-AppName=NASA Wallpaper
-AppVersion=2.2.0
-AppPublisher=PC BAAZ
-AppPublisherURL=https://github.com/pcbaaz/NASA-Wallpaper
-DefaultDirName={autopf}\PC BAAZ\NASA Wallpaper
+AppName={#MyAppName}
+AppVersion={#MyAppVersion}
+AppPublisher={#MyAppPublisher}
+AppPublisherURL={#MyAppURL}
+AppSupportURL={#MyAppURL}
+AppUpdatesURL={#MyAppURL}/releases/latest
+DefaultDirName={localappdata}\Programs\PC BAAZ\NASA Wallpaper
 DefaultGroupName=PC BAAZ\NASA Wallpaper
-UninstallDisplayIcon={app}\NASA_Wallpaper.exe
+UninstallDisplayIcon={app}\{#MyAppExeName}
 Compression=lzma2
 SolidCompression=yes
 OutputDir=installer
@@ -19,27 +27,31 @@ PrivilegesRequired=lowest
 ArchitecturesInstallIn64BitMode=x64compatible
 WizardStyle=modern
 MinVersion=10.0
+DisableProgramGroupPage=yes
+AllowNoIcons=no
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
-Name: "desktopicon"; Description: "Create a desktop icon"; GroupDescription: "Additional icons:"
+; Desktop shortcut ON by default
+Name: "desktopicon"; Description: "Create a desktop icon"; GroupDescription: "Additional icons:"; Flags: checkedonce
 Name: "startup"; Description: "Run on Windows startup"; GroupDescription: "Startup options:"; Flags: unchecked
 
 [Files]
-Source: "dist\NASA_Wallpaper\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "dist\NASA_Wallpaper.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "assets\icon.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{group}\NASA Wallpaper"; Filename: "{app}\NASA_Wallpaper.exe"
-Name: "{group}\Uninstall NASA Wallpaper"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\NASA Wallpaper"; Filename: "{app}\NASA_Wallpaper.exe"; Tasks: desktopicon
+Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\icon.ico"
+Name: "{group}\Uninstall {#MyAppName}"; Filename: "{uninstallexe}"
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\icon.ico"; Tasks: desktopicon
 
 [Registry]
-Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "NASAWallpaper"; ValueData: """{app}\NASA_Wallpaper.exe"""; Flags: uninsdeletevalue; Tasks: startup
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "NASAWallpaper"; ValueData: """{app}\{#MyAppExeName}"""; Flags: uninsdeletevalue; Tasks: startup
 
 [Run]
-Filename: "{app}\NASA_Wallpaper.exe"; Description: "Launch NASA Wallpaper"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#MyAppExeName}"; Description: "Launch NASA Wallpaper now"; Flags: nowait postinstall skipifsilent
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}"
