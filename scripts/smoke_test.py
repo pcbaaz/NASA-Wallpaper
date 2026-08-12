@@ -64,6 +64,10 @@ def main() -> int:
     assert not is_newer("2.1.1", "2.2.0")
     assert not is_newer("2.2.0", "2.2.0")
 
+    # Portrait high-res APOD must be accepted (Fill wallpaper).
+    portrait = evaluate_image_bytes(_jpeg_bytes(2160, 3840, quality=95), thresholds)
+    assert portrait.ok, portrait.reason
+
     print("smoke_test: OK")
     return 0
 

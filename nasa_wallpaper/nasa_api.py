@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from dataclasses import dataclass
 from datetime import date
 from typing import Any
@@ -18,9 +19,10 @@ APOD_START = date(1995, 6, 16)
 class NasaApiError(Exception):
     """Raised when the NASA API cannot fulfill a request."""
 
-    def __init__(self, message: str, *, status_code: int | None = None) -> None:
+    def __init__(self, message: str, *, status_code: int | None = None, retryable: bool = False) -> None:
         super().__init__(message)
         self.status_code = status_code
+        self.retryable = retryable
 
 
 @dataclass(frozen=True)
@@ -49,25 +51,46 @@ def _parse_entry(data: dict[str, Any]) -> ApodEntry:
 
 
 class NasaApodClient:
-    def __init__(self, api_key: str, timeout: float = 20.0) -> None:
+    def __init__(self, api_key: str, timeout: float = 45.0, max_retries: int = 3) -> None:
         self.api_key = api_key
         self.timeout = timeout
+        self.max_retries = max(1, max_retries)
         self.session = requests.Session()
         self.session.headers.update(
-            {"User-Agent": "NASA-Wallpaper/2.0 (+https://github.com/pcbaaz/NASA-Wallpaper)"}
+            {"User-Agent": "NASA-Wallpaper/2.3 (+https://github.com/pcbaaz/NASA-Wallpaper)"}
         )
+
+    def _request_get(self, url: str, *, params: dict | None = None, timeout: float | None = None) -> requests.Response:
+        last_exc: Exception | None = None
+        timeout = timeout if timeout is not None else self.timeout
+        for attempt in range(1, self.max_retries + 1):
+            try:
+                response = self.session.get(url, params=params, timeout=timeout)
+                if response.status_code in (429, 500, 502, 503, 504) and attempt < self.max_retries:
+                    time.sleep(min(2 ** attempt, 8))
+                    continue
+                return response
+            except requests.RequestException as exc:
+                last_exc = exc
+                safe = str(exc)
+                if self.api_key:
+                    safe = safe.replace(self.api_key, "***")
+                logger.warning("NASA request attempt %s/%s failed: %s", attempt, self.max_retries, safe)
+                if attempt < self.max_retries:
+                    time.sleep(min(2 ** attempt, 8))
+                    continue
+                raise NasaApiError(f"Network error: {exc}", retryable=True) from exc
+        raise NasaApiError(f"Network error: {last_exc}", retryable=True)
 
     def get_apod(self, day: date) -> ApodEntry | None:
         params = {"api_key": self.api_key, "date": day.isoformat()}
-        try:
-            response = self.session.get(APOD_URL, params=params, timeout=self.timeout)
-        except requests.RequestException as exc:
-            raise NasaApiError(f"Network error: {exc}") from exc
+        response = self._request_get(APOD_URL, params=params)
 
         if response.status_code == 429:
             raise NasaApiError(
                 "NASA API rate limit reached. Get a free personal key at api.nasa.gov (Settings).",
                 status_code=429,
+                retryable=True,
             )
         if response.status_code == 403:
             raise NasaApiError(
@@ -80,6 +103,7 @@ class NasaApodClient:
             raise NasaApiError(
                 f"NASA API HTTP {response.status_code}",
                 status_code=response.status_code,
+                retryable=response.status_code >= 500,
             )
 
         try:
@@ -102,10 +126,11 @@ class NasaApodClient:
         return _parse_entry(payload)
 
     def download_bytes(self, url: str) -> bytes:
-        try:
-            response = self.session.get(url, timeout=max(self.timeout, 45.0), stream=True)
-        except requests.RequestException as exc:
-            raise NasaApiError(f"Download failed: {exc}") from exc
+        response = self._request_get(url, timeout=max(self.timeout, 90.0))
         if response.status_code != 200:
-            raise NasaApiError(f"Download HTTP {response.status_code}", status_code=response.status_code)
+            raise NasaApiError(
+                f"Download HTTP {response.status_code}",
+                status_code=response.status_code,
+                retryable=response.status_code >= 500,
+            )
         return response.content

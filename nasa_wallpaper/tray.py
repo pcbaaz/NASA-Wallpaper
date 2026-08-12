@@ -104,17 +104,12 @@ class TrayApp:
         self.icon.run()
 
     def _remind_api_key(self) -> None:
-        self._notify(
-            APP_NAME,
-            "Get a free NASA API key in Settings (api.nasa.gov). DEMO_KEY is very limited.",
-        )
+        # Notifications disabled — keep status in tooltip/menu only.
+        logger.info("No personal API key configured (DEMO_KEY fallback)")
 
     def _notify(self, title: str, message: str) -> None:
-        if self.icon:
-            try:
-                self.icon.notify(message, title)
-            except Exception:  # noqa: BLE001
-                logger.debug("Notification unavailable", exc_info=True)
+        # Desktop notifications are intentionally disabled.
+        logger.info("notify suppressed: %s — %s", title, message)
 
     def _set_tooltip(self, text: str) -> None:
         if self.icon:

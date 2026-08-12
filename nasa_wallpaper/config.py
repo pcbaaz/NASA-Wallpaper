@@ -24,9 +24,9 @@ class AppConfig:
     min_height: int = 1080
     min_file_size_kb: int = 800
     cache_keep: int = 10
-    latest_lookback_days: int = 14
-    random_max_attempts: int = 25
-    skip_startup_update_minutes: int = 90
+    latest_lookback_days: int = 30
+    random_max_attempts: int = 40
+    skip_startup_update_minutes: int = 20
     auto_check_updates: bool = True
     last_update: str | None = None
     last_image_path: str | None = None
@@ -66,6 +66,11 @@ def _coerce(data: dict[str, Any]) -> AppConfig:
         cfg.mode = "latest"
     if cfg.interval_hours < 0:
         cfg.interval_hours = 0
+    # Migrate overly aggressive older defaults.
+    if cfg.skip_startup_update_minutes > 30:
+        cfg.skip_startup_update_minutes = 20
+    if cfg.latest_lookback_days < 30:
+        cfg.latest_lookback_days = 30
     return cfg
 
 

@@ -77,21 +77,19 @@ def evaluate_image_bytes(data: bytes, thresholds: QualityThresholds) -> QualityR
     except Exception as exc:  # noqa: BLE001 — bad downloads happen
         return QualityResult(False, f"invalid image: {exc}", size_kb=size_kb)
 
-    if width < thresholds.min_width or height < thresholds.min_height:
+    if width < 1 or height < 1:
+        return QualityResult(False, "invalid dimensions", size_kb=size_kb)
+
+    # Accept landscape or portrait if large enough for desktop Fill.
+    # (Many APODs are portrait; rejecting them left Latest stuck on old cache.)
+    short_side = min(width, height)
+    long_side = max(width, height)
+    min_short = min(thresholds.min_width, thresholds.min_height)
+    min_long = max(thresholds.min_width, thresholds.min_height)
+    if short_side < min_short or long_side < min_long:
         return QualityResult(
             False,
             f"resolution too low ({width}x{height})",
-            width=width,
-            height=height,
-            size_kb=size_kb,
-        )
-
-    # Prefer landscape / wallpaper-friendly aspect (reject extreme portraits/panoramas lightly)
-    aspect = width / max(height, 1)
-    if aspect < 1.2:
-        return QualityResult(
-            False,
-            f"not wallpaper-friendly aspect ({aspect:.2f})",
             width=width,
             height=height,
             size_kb=size_kb,

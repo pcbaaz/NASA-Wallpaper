@@ -63,7 +63,7 @@ class WallpaperService:
         client = self._client()
         known_dates = self.cache.known_dates()
         known_hashes = self.cache.known_hashes()
-        lookback = max(1, self.config.latest_lookback_days)
+        lookback = max(30, self.config.latest_lookback_days)
         today = date.today()
         cached_fallback_day: date | None = None
 
@@ -147,7 +147,12 @@ class WallpaperService:
         *,
         allow_cached_date: bool,
     ) -> UpdateResult:
-        entry = client.get_apod(day)
+        try:
+            entry = client.get_apod(day)
+        except NasaApiError as exc:
+            # Keep looping other days instead of aborting the whole update.
+            return UpdateResult(False, str(exc))
+
         if entry is None:
             return UpdateResult(False, "APOD not found")
 
@@ -156,7 +161,11 @@ class WallpaperService:
             return UpdateResult(False, meta.reason)
 
         assert entry.image_url
-        data = client.download_bytes(entry.image_url)
+        try:
+            data = client.download_bytes(entry.image_url)
+        except NasaApiError as exc:
+            return UpdateResult(False, str(exc))
+
         quality = evaluate_image_bytes(data, self._thresholds())
         if not quality.ok:
             return UpdateResult(False, quality.reason)
