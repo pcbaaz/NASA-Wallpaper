@@ -176,7 +176,8 @@ jobs:
             1. Download **NASA_Wallpaper_Setup.exe**
             2. Run the installer (desktop shortcut + startup are enabled by default)
             3. Launch from desktop / Start Menu (or it will start with Windows)
-            4. Tray → **Update Now** (no API key needed — uses apod.nasa.gov)
+            4. Tray → **Update Now** (no API key — uses apod.nasa.gov)
+            5. App updates install automatically when a new release is published
 
             ### Notes
             - **macOS:** right-click → Open the first time (unsigned build)

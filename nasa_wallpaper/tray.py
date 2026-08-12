@@ -108,15 +108,38 @@ class TrayApp:
             self.icon.title = text[:120]
 
     def _refresh_menu(self) -> None:
+        # #region agent log
+        try:
+            import json as _json, time as _time
+            from pathlib import Path as _P
+            _P(r"C:\Users\behna\Projects\NASA-Wallpaper\debug-0a6770.log").open("a", encoding="utf-8").write(
+                _json.dumps({"sessionId":"0a6770","hypothesisId":"B","location":"tray.py:_refresh_menu","message":"refresh menu","data":{"thread":threading.current_thread().name,"pending":None if self._pending_app_update is None else self._pending_app_update.version,"frozen":current_install_path() is not None},"timestamp":int(_time.time()*1000)}) + "\n"
+            )
+        except Exception:
+            pass
+        # #endregion
         if self.icon:
             self.icon.menu = self._build_menu()
             try:
                 self.icon.update_menu()
-            except Exception:  # noqa: BLE001
-                pass
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Menu refresh failed: %s", exc)
 
     def _key_status_label(self) -> str:
         return "Source: apod.nasa.gov"
+
+    def _update_status_label(self) -> str:
+        if self._pending_app_update is not None:
+            return f"Update available: v{self._pending_app_update.version}"
+        return f"App version {__version__}"
+
+    def _download_label(self) -> str:
+        if self._pending_app_update is not None:
+            return f"Download & install v{self._pending_app_update.version}"
+        return "Download & install update"
+
+    def _can_install_update(self) -> bool:
+        return self._pending_app_update is not None and current_install_path() is not None
 
     def _build_menu(self) -> pystray.Menu:
         last = self.config.last_title or "None yet"
@@ -142,6 +165,7 @@ class TrayApp:
         return pystray.Menu(
             Item(f"Last: {last[:48]}", None, enabled=False),
             Item(self._key_status_label(), None, enabled=False),
+            Item(lambda item: self._update_status_label(), None, enabled=False),
             pystray.Menu.SEPARATOR,
             Item("Update Now", self._on_update_now),
             Item(
@@ -180,16 +204,17 @@ class TrayApp:
             Item(
                 "App updates",
                 pystray.Menu(
-                    Item("Check for updates", self._on_check_updates),
+                    Item("Check & install now", self._on_check_updates),
                     Item(
-                        "Download & install update",
+                        lambda item: self._download_label(),
                         self._on_install_update,
-                        enabled=self._pending_app_update is not None
-                        and current_install_path() is not None,
+                        # Evaluate when menu opens so a background check can enable it
+                        # without relying on a successful cross-thread menu rebuild.
+                        enabled=lambda item: self._can_install_update(),
                     ),
                     Item("Open releases page", lambda icon, item: open_url(RELEASES_PAGE)),
                     Item(
-                        "Auto-check on startup",
+                        "Auto-install on startup",
                         self._on_toggle_auto_check,
                         checked=lambda item: self.config.auto_check_updates,
                     ),
@@ -293,7 +318,7 @@ class TrayApp:
     def _on_check_updates(self, icon=None, item=None):  # noqa: ARG002
         threading.Thread(
             target=self._check_app_updates,
-            kwargs={"silent": False},
+            kwargs={"silent": False, "auto_install": True},
             name="nasa-app-update-check",
             daemon=True,
         ).start()
@@ -303,14 +328,26 @@ class TrayApp:
         save_config(self.config)
         self._refresh_menu()
         state = "on" if self.config.auto_check_updates else "off"
-        self._notify(APP_NAME, f"Auto-check updates: {state}")
+        self._notify(APP_NAME, f"Auto-install updates: {state}")
 
     def _on_install_update(self, icon=None, item=None):  # noqa: ARG002
+        # #region agent log
+        try:
+            import json as _json, time as _time
+            from pathlib import Path as _P
+            _P(r"C:\Users\behna\Projects\NASA-Wallpaper\debug-0a6770.log").open("a", encoding="utf-8").write(
+                _json.dumps({"sessionId":"0a6770","hypothesisId":"B","location":"tray.py:_on_install_update","message":"install clicked","data":{"pending":None if self._pending_app_update is None else self._pending_app_update.version,"install_path":str(current_install_path())},"timestamp":int(_time.time()*1000)}) + "\n"
+            )
+        except Exception:
+            pass
+        # #endregion
         if self._pending_app_update is None:
-            self._notify(APP_NAME, "No update queued. Use Check for updates first.")
+            # No queued update — run a full check + install.
+            self._on_check_updates()
             return
         if current_install_path() is None:
             open_url(self._pending_app_update.html_url)
+            self._set_tooltip(f"{APP_NAME} — open releases (source run)")
             self._notify(APP_NAME, "Running from source — opening release page.")
             return
         threading.Thread(
@@ -319,10 +356,13 @@ class TrayApp:
             daemon=True,
         ).start()
 
-    def _check_app_updates(self, silent: bool = False) -> None:
+    def _check_app_updates(self, silent: bool = False, auto_install: bool | None = None) -> None:
         if self._app_update_busy:
             return
         self._app_update_busy = True
+        should_install = (
+            self.config.auto_check_updates if auto_install is None else auto_install
+        )
         try:
             from datetime import datetime
 
@@ -332,21 +372,40 @@ class TrayApp:
             if update is None:
                 self._pending_app_update = None
                 if not silent:
+                    self._set_tooltip(f"{APP_NAME} — up to date (v{__version__})")
                     self._notify(APP_NAME, f"You're up to date (v{__version__}).")
                 self._refresh_menu()
                 return
+
             self._pending_app_update = update
+            self._set_tooltip(f"{APP_NAME} — update v{update.version} available")
             self._refresh_menu()
-            self._notify(
-                APP_NAME,
-                f"Update v{update.version} available. Tray → App updates → Download & install.",
-            )
-            # Packaged builds: auto-install when user already opted into auto-check
-            # and this is a silent startup check — only notify; install is explicit
-            # to avoid surprising restarts.
+            # #region agent log
+            try:
+                import json as _json, time as _time
+                from pathlib import Path as _P
+                _P(r"C:\Users\behna\Projects\NASA-Wallpaper\debug-0a6770.log").open("a", encoding="utf-8").write(
+                    _json.dumps({"sessionId":"0a6770","hypothesisId":"AUTO","location":"tray.py:_check_app_updates","message":"update found","data":{"version":update.version,"should_install":should_install,"frozen":current_install_path() is not None,"silent":silent},"timestamp":int(_time.time()*1000)}) + "\n"
+                )
+            except Exception:
+                pass
+            # #endregion
+
+            if should_install and current_install_path() is not None:
+                self._set_tooltip(f"{APP_NAME} — installing v{update.version}…")
+                self._notify(APP_NAME, f"Downloading and installing v{update.version}…")
+                self._install_pending_update()
+                return
+
+            if not silent:
+                self._notify(
+                    APP_NAME,
+                    f"Update v{update.version} available. Tray → App updates → Download & install.",
+                )
         except Exception as exc:  # noqa: BLE001
             logger.warning("App update check failed: %s", exc)
             if not silent:
+                self._set_tooltip(f"{APP_NAME} — update check failed")
                 self._notify(APP_NAME, str(exc))
         finally:
             self._app_update_busy = False
@@ -356,12 +415,24 @@ class TrayApp:
         if update is None:
             return
         try:
+            self._set_tooltip(f"{APP_NAME} — downloading v{update.version}…")
             self._notify(APP_NAME, f"Downloading v{update.version}…")
+            # #region agent log
+            try:
+                import json as _json, time as _time
+                from pathlib import Path as _P
+                _P(r"C:\Users\behna\Projects\NASA-Wallpaper\debug-0a6770.log").open("a", encoding="utf-8").write(
+                    _json.dumps({"sessionId":"0a6770","hypothesisId":"AUTO","location":"tray.py:_install_pending_update","message":"install start","data":{"version":update.version,"path":str(current_install_path())},"timestamp":int(_time.time()*1000)}) + "\n"
+                )
+            except Exception:
+                pass
+            # #endregion
             install_update(update)
             self._notify(APP_NAME, "Installing update and restarting…")
             self._on_quit()
         except Exception as exc:  # noqa: BLE001
             logger.exception("Failed to install app update")
+            self._set_tooltip(f"{APP_NAME} — update failed")
             self._notify(APP_NAME, f"Update failed: {exc}")
 
     def _on_quit(self, icon=None, item=None):  # noqa: ARG002

@@ -71,16 +71,18 @@ python -m nasa_wallpaper
 - Run at startup
 - Open APOD website
 - Settings…
-- App updates → Check / Download & install / Auto-check
+- App updates → Check & install / Auto-install on startup
 - Quit
 
 ## App updates
 
-Packaged builds can update themselves from GitHub Releases:
+Packaged builds **auto-download and replace themselves** when a newer GitHub Release exists (enabled by default):
 
-1. Tray → **App updates → Check for updates**
-2. If a newer version exists → **Download & install update**
-3. The app restarts on the new binary
+1. On startup the app checks Releases
+2. If newer → downloads, replaces the binary, and restarts
+3. Or use Tray → **App updates → Check & install now**
+
+You can turn auto-install off under **App updates → Auto-install on startup**.
 
 ## Platform notes
 

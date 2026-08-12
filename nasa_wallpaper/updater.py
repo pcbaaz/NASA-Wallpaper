@@ -60,11 +60,12 @@ def platform_asset_prefix() -> str | None:
     return None
 
 
-def check_for_update(timeout: float = 15.0) -> AppUpdate | None:
+def check_for_update(timeout: float = 15.0, current_version: str | None = None) -> AppUpdate | None:
     """Return newer release info, or None if up to date / unavailable."""
+    current = current_version if current_version is not None else __version__
     headers = {
         "Accept": "application/vnd.github+json",
-        "User-Agent": f"NASA-Wallpaper/{__version__}",
+        "User-Agent": f"NASA-Wallpaper/{current}",
     }
     try:
         response = requests.get(RELEASES_API, headers=headers, timeout=timeout)
@@ -72,11 +73,32 @@ def check_for_update(timeout: float = 15.0) -> AppUpdate | None:
         data = response.json()
     except requests.RequestException as exc:
         logger.warning("Update check failed: %s", exc)
+        # #region agent log
+        try:
+            import json as _json, time as _time
+            from pathlib import Path as _P
+            _P(r"C:\Users\behna\Projects\NASA-Wallpaper\debug-0a6770.log").open("a", encoding="utf-8").write(
+                _json.dumps({"sessionId":"0a6770","hypothesisId":"C","location":"updater.py:check_for_update","message":"update check network fail","data":{"error":str(exc),"current":current},"timestamp":int(_time.time()*1000)}) + "\n"
+            )
+        except Exception:
+            pass
+        # #endregion
         raise RuntimeError(f"Could not check for updates: {exc}") from exc
 
     tag = str(data.get("tag_name") or "")
     version = tag.lstrip("vV")
-    if not version or not is_newer(version):
+    newer = bool(version) and is_newer(version, current)
+    # #region agent log
+    try:
+        import json as _json, time as _time
+        from pathlib import Path as _P
+        _P(r"C:\Users\behna\Projects\NASA-Wallpaper\debug-0a6770.log").open("a", encoding="utf-8").write(
+            _json.dumps({"sessionId":"0a6770","hypothesisId":"A","location":"updater.py:check_for_update","message":"update check compared","data":{"tag":tag,"remote":version,"current":current,"is_newer":newer,"frozen":bool(getattr(sys,"frozen",False)),"exe":str(current_install_path())},"timestamp":int(_time.time()*1000)}) + "\n"
+        )
+    except Exception:
+        pass
+    # #endregion
+    if not version or not newer:
         return None
 
     prefix = platform_asset_prefix()
@@ -128,16 +150,33 @@ def download_update(update: AppUpdate, dest_dir: Path | None = None) -> Path:
 
 def _windows_replace_script(current: Path, new_file: Path) -> Path:
     script = Path(tempfile.gettempdir()) / "nasa_wallpaper_apply_update.bat"
+    # Quote paths — install dir contains spaces ("PC BAAZ\\NASA Wallpaper").
+    target = str(current).replace('"', "")
+    source = str(new_file).replace('"', "")
+    # #region agent log
+    try:
+        import json as _json, time as _time
+        from pathlib import Path as _P
+        _P(r"C:\Users\behna\Projects\NASA-Wallpaper\debug-0a6770.log").open("a", encoding="utf-8").write(
+            _json.dumps({"sessionId":"0a6770","hypothesisId":"D","location":"updater.py:_windows_replace_script","message":"bat paths","data":{"target":target,"source":source,"target_has_space":(" " in target)},"timestamp":int(_time.time()*1000)}) + "\n"
+        )
+    except Exception:
+        pass
+    # #endregion
     # Wait for this process to exit, replace exe, relaunch.
     content = f"""@echo off
 setlocal
-set TARGET={current}
-set SOURCE={new_file}
+set "TARGET={target}"
+set "SOURCE={source}"
 :wait
 timeout /t 1 /nobreak >nul
 tasklist /FI "PID eq {os.getpid()}" | find "{os.getpid()}" >nul
 if not errorlevel 1 goto wait
 copy /Y "%SOURCE%" "%TARGET%" >nul
+if errorlevel 1 (
+  echo copy failed > "%TEMP%\\nasa_wallpaper_update_error.txt"
+  exit /b 1
+)
 start "" "%TARGET%"
 del "%~f0"
 """

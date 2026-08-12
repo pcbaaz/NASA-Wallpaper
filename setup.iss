@@ -2,7 +2,7 @@
 ; Built by GitHub Actions / scripts\build.ps1
 
 #define MyAppName "NASA Wallpaper"
-#define MyAppVersion "2.5.0"
+#define MyAppVersion "2.5.1"
 #define MyAppPublisher "PC BAAZ"
 #define MyAppURL "https://github.com/pcbaaz/NASA-Wallpaper"
 #define MyAppExeName "NASA_Wallpaper.exe"
