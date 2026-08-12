@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# PyInstaller
+*.spec
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Local / secrets
+.env
+*.log
+nasa_config.json
+
+# Installer output (never commit binaries)
+installer/*.exe
+installer/*.zip
+
+# Temp images
+temp_*.jpg
+*.tmp
