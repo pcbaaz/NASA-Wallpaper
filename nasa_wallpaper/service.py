@@ -56,7 +56,9 @@ class WallpaperService:
         return QualityThresholds(
             min_width=self.config.min_width,
             min_height=self.config.min_height,
-            min_file_size_kb=self.config.min_file_size_kb,
+            min_file_size_kb=max(500, self.config.min_file_size_kb),
+            require_scenic_hint=False,
+            min_colorfulness=12.0,
         )
 
     def _update_latest(self) -> UpdateResult:

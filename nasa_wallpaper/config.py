@@ -71,6 +71,8 @@ def _coerce(data: dict[str, Any]) -> AppConfig:
         cfg.skip_startup_update_minutes = 20
     if cfg.latest_lookback_days < 30:
         cfg.latest_lookback_days = 30
+    if cfg.min_file_size_kb < 500:
+        cfg.min_file_size_kb = 500
     return cfg
 
 

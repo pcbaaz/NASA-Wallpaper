@@ -68,6 +68,16 @@ def main() -> int:
     portrait = evaluate_image_bytes(_jpeg_bytes(2160, 3840, quality=95), thresholds)
     assert portrait.ok, portrait.reason
 
+    ugly = ApodEntry(
+        date="2016-04-12",
+        title="Combined Solar Eclipse Corona from Earth and Space",
+        explanation="a montage matched to false-colored observations from SOHO",
+        media_type="image",
+        url="https://example.com/a.jpg",
+        hdurl="https://example.com/a.jpg",
+    )
+    assert not passes_metadata_filter(ugly).ok, "scientific montage should fail"
+
     print("smoke_test: OK")
     return 0
 
